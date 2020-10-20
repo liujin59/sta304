@@ -1,0 +1,194 @@
+---
+title: "Have you ever married? A cross-sectional study on factors impacting conjugal history"
+author: "Jingying Liu, Zhijian Zhu, Mingze Xu"
+date: "October 19, 2020"
+output: bookdown::pdf_document2
+bibliography: references.bib
+nocite: '@*'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+library(tidyverse)
+library(knitr)
+library(scales)
+```
+
+Github link:
+
+https://github.com/liujin59/sta304.git
+
+\newpage
+
+## Abstract
+
+We were interested that whether an individual is married or not is  significantly related to his/her age, income and education degree in Canada. We used a logistic regression model to address this question. We found out that age, income and education degree are all associated with the outcome of interest. Specifically, being older, earning over \$50,000 and having a University degree all lead to a higher odds of getting married. The next steps would be fixing some study flaws and analysis shortcomings and account for other factors to improve the study and analysis results.
+
+\newpage
+
+## Introduction
+
+Every day there are many couples register marriage in Canada. They are of different ages, having different social backgrounds and coming from all kinds of sectors and professions. Motivated by this phenomenon, we would like to predict whether an individual is married or not. Possible factors suggested by current evidence in the society includes age, income and education level are pivotal on a person's marriage.
+
+We established a statistical model to assess the prediction power of variables like age, income, and education level on the binary outcome - Have the individual ever married or not. The data was extracted from the 2017 General Social Survey(GSS) on the Family, which is a nation-wide survey that taking in Canadians' social-demographic variables, as well as seizing the socio-economic trend over the country. 
+
+The factors that are predictive to individual's conjugal behavior would help social researcher learn the intentions and reason to union better, provide reference and evidence for governors to make policy and social decisions, and popularize the social knowledge to the public through various media. 
+
+\newpage
+
+## Data
+
+The target population for the 2017 GSS is all people except all age smaller than 15 and all people from Yukon, Northwest Territories, and Nunavut. They use the stratification random sampling and the sampling frame is all available telephone numbers and address registered. In each stratum, the sampling strategy is simple random sample without replacement. As the result of sampling, the response rate was 52.4%. It would induce some non-sampling errors appear because of the non-response on the survey results, but they used adjustments to the weights to minimize the problem. For the sampling errors, it is an unavoidable bias because of the cost of sampling is finite and we usually use a statstical method to avoid it such as bootstrap weights or cross-validation.
+
+\newpage
+
+## Model
+
+We use logistic regression model here to address the research question, assuming the outcome is Bernoulli-distributed. It's a type of generalized linear models with a logit link function of the mean response. The outcome `ever_married`, has a person ever married or not, is denoted as $Y_i$. 
+
+$$
+Y_{i}=\left\{\begin{array}{ll}
+1 & \text { if had ever married } \\
+0 & \text { if had never married }
+\end{array}\right.
+$$
+
+Such that $Y_i \sim \text{Bernoulli}(p_i)$, where $p_i = P(Y_i = 1)$. 
+
+The three main predictors are age, income (over \$50,000 annual income or not), and education (with a University degree or not) The regression models log odds of the expected value of the response variable $\frac{p_i}{1-p_i}$. The coefficient $\beta_i$ would be interpreted as, one unit increase in the value of predictor variable $X_i$ leads to a $\beta_i$ increase in $\log \frac{p}{1-p}$, controlling other covariates to be held constant. The model equation could be written as follows:
+
+
+$$
+log\frac{p_i}{1-p_i} = \beta_0 + \beta_1 X_{age,i} + \beta_2X_{income-over 50K,i} + \beta_3X_{education-university,i} 
+$$
+where $i=1 \ldots n$.
+
+\newpage
+
+## Results
+
+We used plots to visually check the outcome of interest the exposures, as well as their relationships.
+
+```{r}
+css <- read.csv("gss.csv", header=T)
+
+css1 <- css %>% mutate(income_new = ifelse(income_respondent %in% 
+                                             c("25,000 to $49,999", "Less than $25,000"), 
+                                           "Under 50k", "Over 50k"),
+                       education_new = ifelse(education %in% c(
+                         "Bachelor's degree (e.g. B.A., B.Sc., LL.B.)"
+                       ), "Uni degree", "No Uni degree")) 
+
+css1$ever_married[css1$ever_married=="Don't know"] <- NA
+css1$age <- round(css1$age,0)
+
+css1$ever_married1[css1$ever_married=="Yes"] <-1
+css1$ever_married1[css1$ever_married=="No"] <-0
+css1 <- css1 %>% filter(!is.na(income_new), !is.na(education_new),!is.na(age),!is.na(ever_married))
+css1$income_new <- factor(css1$income_new, levels = c("Under 50k", "Over 50k"))
+css1$education_new <- factor(css1$education_new, levels = c("No Uni degree", "Uni degree"))
+```
+
+We see that in Figure \@ref(fig:figure1) our sample approximately 65% had married before.
+
+```{r figure1, fig.cap="Percentage of selected individuals who had ever married in the 2017 CSS survey"}
+css1 %>% ggplot(aes(x=ever_married))+
+  geom_bar(aes(y = (..count..)/sum(..count..)), width=0.7, fill="pink", col="black")+
+  theme_minimal() + scale_y_continuous(labels = percent) + 
+  labs(y="",
+       x="", 
+       title="Proportions of sample ever married", 
+       caption ="2017 General Social Survey (GSS) - Family") + coord_flip()
+```
+
+The distribution of age is slightly left skewed and the median is about 55 (Figure \@ref(fig:figure2)).
+
+```{r figure2, fig.cap="Distribution of age of selected individuals in the 2017 CSS survey"}
+css1 %>% ggplot(aes(x="", y=age)) + geom_boxplot(fill="cyan3")+
+  theme_minimal() +
+  labs(y="", x="", 
+       title="Distribution of Age", 
+       caption ="2017 General Social Survey (GSS)") + coord_flip()
+```
+
+We see that in figure \@ref(fig:figure3), approximately 65% of our sample earn greater than $100,000 a year.
+
+```{r figure3, fig.cap="Percentage of selected individuals who earn greater than $50,000 a year in the 2017 CSS survey"}
+css1 %>% ggplot(aes(x=income_new))+
+  geom_bar(aes(y = (..count..)/sum(..count..)), width=0.7, fill="springgreen", col="black")+
+  theme_classic() + scale_y_continuous(labels = percent) + 
+  labs(y="", x="", 
+       title="Annual personal income greater than $50,000", 
+       caption ="2017 General Social Survey (GSS) on the Family") + coord_flip()
+```
+
+We see that in Figure \@ref(fig:figure4) close to 20% of our sample have a University degree. 
+
+```{r figure4, fig.cap="Breakdown of education degree of selected individuals in the 2017 CSS survey"}
+# bar graph showing proportion of education levels
+css1 %>% ggplot(aes(x=education_new))+
+  geom_bar(aes(y = (..count..)/sum(..count..)), width=0.7, fill="orange2", col="black")+
+  theme_light() + scale_y_continuous(labels = percent) + 
+  labs(y="", x="", 
+       title="Education level", 
+       caption ="2017 General Social Survey (GSS) on the Family") + coord_flip()
+```
+
+We see that in Figure \@ref(fig:figure5 ) education does not really have an association with whether an individual had ever married or not. Also the age distribution for those who had ever married is generally larger in median, almost equally spread, which makes sense socially.
+
+```{r figure5, fig.cap="Percentage of selected individuals who had ever married and age distribution by education."}
+a <- css1 %>% ggplot(aes(x=ever_married))+
+  geom_bar(aes(y = (..count..)/sum(..count..)), width=0.7, fill="magenta3", col="black")+
+  theme_bw() + scale_y_continuous(labels = percent) + 
+  labs(y="", x="", 
+       title="Have ever married or not by education", 
+       caption ="2017 General Social Survey (GSS)") + facet_wrap(~education_new)
+
+b <- css1 %>% ggplot(aes(x="", y=age, fill=ever_married))+
+  geom_boxplot() + 
+  theme_bw() +
+   scale_fill_hue(name = "Ever married", l=40, c=30) +
+  labs(y="", x="", 
+       title="Age distribution by having ever married or not",
+       caption ="2017 General Social Survey (GSS)")
+
+library(gridExtra)
+grid.arrange(a,b, nrow=2)
+```
+
+\newpage
+
+**Model results**
+
+Table \@ref(tab:table1) contains the logistic regression model output. We see that the P-values for age, income and education degree are all far less than 0.05 (significance level), which means highly significant. So age, income and education degree are statistically significant in predicting whether an individual has ever married. 
+
+```{r table1}
+model <- glm(ever_married1 ~ age + income_new + education_new, family = "binomial", data = css1)
+kable(summary(model)$coefficients, format="markdown", digits=2, caption = "Logit Model Results")
+```
+
+Table \@ref(tab:table2) reports the estimated odds ratio with the 95% confidence interval from the logit model. We see that individuals of older age, with higher income, and with a university degree are more likely to get married than those younger, less-educated people with lower income. 
+
+```{r table2}
+kable(exp(cbind(OR = coef(model), confint(model))), format="markdown", digits = 2, 
+      caption = "Estimated Odds Ratio and 95% Confidence Interval")
+```
+
+\newpage
+
+## Discussion
+
+The odds of having ever married increases by 0.08 with an additional year increase in age, keeping other predictors fixed.  The odds of having ever married for the richer people (who earn more than $50,000 annually) is 1.51 times that of people with less income. For those with a university degree, the odds is 1.18 times that of people without one. 
+
+**Weaknesses**
+
+One major weakness in our study is the lack of ability to generalize the results. We did not consider all relative parameters in the dataset and did not consider to minimize the sampling error. Furthermore, we did not create a new model for the model comparison. Also, the bias seem becomes higher since we divide the income in to two unbalanced subsets and the people who have a University degree are much less than the people without one in our sample. The dataset is overpowered for our logisitic regression model due to such a huge sample size, which resulted in extremely small P-values but not so large odds ratios (not large in relative magnitude). Additionally, model fit was not assessed and the causality pathway is still unclear, we cannot establish conclusions implying strong causality. 
+
+**Next Steps**
+
+Beside the quantification, we are not surprised that age, income and education degree are highly associated with a person's conjugal history, as they are pivotal factors that would affect people's intentions and reasons to unite. But it's not a simple outcome that is caused by only these 3 factors and there are still other factors that influences the incidence, such as race, religious belief, communication ability, times have spent in Canada, etc, could be confounding factors. The next steps would be building another logistic model that assess the predictiveness and influence of these additional factors. What's more, we will look into the causality pathway and see whether they actually predict the outcome or simply relates to it and remove the bias in interpretation. If data not be available from the 2017 CSS survey, we could try to find other national surveys that capture the information we would require to conduct further analysis. 
+
+\newpage
+
+## References
+
